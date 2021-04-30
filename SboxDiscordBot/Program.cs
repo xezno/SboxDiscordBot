@@ -1,13 +1,16 @@
 ﻿using System;
+using Disco;
 
 namespace SboxDiscordBot
 {
     class Program
     {
-        static void Main(string[] args)
+        public static DiscoApplication discoApplication;
+        public static void Main(string[] args)
         {
-            var bootstrap = new Bootstrap();
-            bootstrap.Run();
+            discoApplication = new DiscoApplication();
+            discoApplication.Run().Wait();
+            Console.WriteLine("Bot quit");
         }
     }
 }

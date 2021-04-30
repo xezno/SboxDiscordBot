@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 
 /*
  * Fetch-style API based on the documentation located at https://github.github.io/fetch/
@@ -46,6 +47,11 @@ namespace SboxDiscordBot
             return Encoding.UTF8.GetString(Data);
         }
 
+        public T Json<T>()
+        {
+            return JsonConvert.DeserializeObject<T>(Text());
+        }
+
         public Dictionary<string, string> Json()
         {
             return JsonConvert.DeserializeObject<Dictionary<string, string>>(Text());
@@ -69,75 +75,103 @@ namespace SboxDiscordBot
 
     public class Request
     {
+        private List<FetchRequest> fetchRequestsList = new List<FetchRequest>();
+
+        private Promise<FetchResponse> InternalFetch(string url, FetchOptions options = null)
+        {
+            var newRequest = new FetchRequest();
+            fetchRequestsList.Add(newRequest);
+            
+            newRequest.Fetch(url, options);
+
+            return newRequest.Promise;
+        }
+
+        public static Request Instance { get; private set; } = new Request();
+
         public static Promise<FetchResponse> Fetch(string url, FetchOptions options = null)
         {
-            var promise = new Promise<FetchResponse>();
+            return Instance.InternalFetch(url, options);
+        }
+    }
+
+    public class FetchRequest
+    {
+        public WebClient WebClient { get; set; }
+        public Promise<FetchResponse> Promise { get; set; }
+
+        public FetchRequest()
+        {
+            WebClient = new WebClient();
+            Promise = new Promise<FetchResponse>();
+        }
+        
+        public void Fetch(string url, FetchOptions options = null)
+        {
             options ??= new FetchOptions();
+            WebClient.Headers = new WebHeaderCollection();
 
-            using (var client = new WebClient())
+            foreach (var kvp in options.Headers)
+                WebClient.Headers.Add(kvp.Key, kvp.Value);
+
+            WebClient.UploadStringCompleted += (s, ev) => UploadDataCompleted(url, s, ev);
+            WebClient.DownloadDataCompleted += (s, ev) => DownloadDataCompleted(url, s, ev);
+
+            switch (options.Method)
             {
-                client.Headers = new WebHeaderCollection();
-
-                foreach (var kvp in options.Headers)
-                    client.Headers.Add(kvp.Key, kvp.Value);
-
-                client.UploadStringCompleted += (s, ev) => UploadDataCompleted(url, promise, s, ev, client);
-                client.DownloadDataCompleted += (s, ev) => DownloadDataCompleted(url, promise, s, ev, client);
-
-                switch (options.Method)
-                {
-                    case "POST":
-                        client.UploadStringAsync(new Uri(url), options.Body);
-                        break;
-                    default:
-                        client.DownloadDataAsync(new Uri(url));
-                        break;
-                }
+                case "POST":
+                    WebClient.UploadStringAsync(new Uri(url), options.Body);
+                    break;
+                default:
+                    WebClient.DownloadDataAsync(new Uri(url));
+                    break;
             }
-
-            return promise;
         }
 
-        private static void UploadDataCompleted(string url, Promise<FetchResponse> promise, object sender, EventArgs _ev, WebClient client)
+        private void UploadDataCompleted(string url, object sender, EventArgs ev)
         {
-            var ev = (UploadStringCompletedEventArgs)_ev;
-            if (ev.Error != null)
+            var uploadEv = (UploadStringCompletedEventArgs)ev;
+            if (uploadEv.Error != null)
             {
-                Logging.Log(ev.Error.Message, Logging.Severity.Fatal);
-                promise.Reject(ev.Error);
+                Logging.Log(uploadEv.Error.Message, Logging.Severity.Fatal);
+                Promise.Reject(uploadEv.Error);
             }
             else
             {
                 // TODO: Status codes
-                var response = new FetchResponse(Encoding.UTF8.GetBytes(ev.Result), 200, "OK", url);
+                var response = new FetchResponse(Encoding.UTF8.GetBytes(uploadEv.Result), 200, "OK", url);
 
                 response.Headers = new Dictionary<string, string>();
-                for (int i = 0; i < client.ResponseHeaders.Count; i++)
-                    response.Headers.Add(client.ResponseHeaders.GetKey(i), client.ResponseHeaders.Get(i));
+                for (int i = 0; i < WebClient.ResponseHeaders?.Count; i++)
+                    response.Headers.Add(WebClient.ResponseHeaders.GetKey(i), WebClient.ResponseHeaders.Get(i));
 
-                promise.Resolve(response);
+                Promise.Resolve(response);
             }
+            
+            WebClient.Dispose();
         }
 
-        private static void DownloadDataCompleted(string url, Promise<FetchResponse> promise, object sender, EventArgs _ev, WebClient client)
+        private void DownloadDataCompleted(string url, object sender, EventArgs ev)
         {
-            var ev = (DownloadDataCompletedEventArgs)_ev;
-            if (ev.Error != null)
+            var downloadEv = (DownloadDataCompletedEventArgs)ev;
+            if (downloadEv.Error != null)
             {
-                Logging.Log(ev.Error.Message, Logging.Severity.Fatal);
-                promise.Reject(ev.Error);
+                Logging.Log(downloadEv.Error.Message, Logging.Severity.Fatal);
+                Promise.Reject(downloadEv.Error);
             }
             else
             {
                 // TODO: Status codes
-                var response = new FetchResponse(ev.Result, 200, "OK", url);
+                var response = new FetchResponse(downloadEv.Result, 200, "OK", url);
 
                 response.Headers = new Dictionary<string, string>();
-                for (int i = 0; i < client.ResponseHeaders.Count; i++)
-                    response.Headers.Add(client.ResponseHeaders.GetKey(i), client.ResponseHeaders.Get(i));
+                for (int i = 0; i < WebClient.ResponseHeaders?.Count; i++)
+                    response.Headers.Add(WebClient.ResponseHeaders.GetKey(i), WebClient.ResponseHeaders.Get(i));
 
-                promise.Resolve(response);
+                Promise.Resolve(response);
             }
+            
+            WebClient.Dispose();
         }
     }
 }
