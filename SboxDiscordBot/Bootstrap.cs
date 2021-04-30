@@ -4,9 +4,12 @@ namespace SboxDiscordBot
 {
     public class Bootstrap
     {
+        private BotInstance botInstance;
         public void Run()
         {
-            Console.WriteLine("Hello World!");
+            botInstance = new BotInstance();
+
+            botInstance.MainAsync();
         }
     }
 }
