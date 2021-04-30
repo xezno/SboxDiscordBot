@@ -4,3 +4,6 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 Config.json
+.vs/
+.idea/
+TestResults/

@@ -24,6 +24,8 @@ namespace SboxDiscordBot
 
         public Promise<Org> GetOrg(string ident)
         {
+            ident = ident.ToLower();
+
             var promise = new Promise<Org>();
             /* Right now, this is a big bodge / hack
              * Here's what we do:
