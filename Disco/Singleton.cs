@@ -4,7 +4,7 @@ namespace Disco
 {
     public class Singleton<T>
     {
-        static T instance;
+        private static T instance;
 
         public static T Instance
         {

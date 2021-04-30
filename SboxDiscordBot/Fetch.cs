@@ -1,13 +1,13 @@
-﻿using Newtonsoft.Json;
-using RSG;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
+using RSG;
 
 /*
- * Fetch-style API based on the documentation located at https://github.github.io/fetch/
+ * Fetch-style API based on the documentation located at https://github.github.io/fetch/.
+ * Incomplete.
  */
 
 namespace SboxDiscordBot
@@ -21,22 +21,30 @@ namespace SboxDiscordBot
         ArrayBuffer,
         TypedArray,
         DataView
-    };
+    }
 
     public class FetchOptions
     {
         // TODO: Implement all of below
         public string Method { get; set; } = "GET";
         public string Body { get; set; } = "";
-        public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> Headers { get; set; } = new();
         public string Credentials { get; set; } = "omit";
     }
 
     public class FetchResponse
     {
+        public FetchResponse(byte[] data, int status, string statusText, string url)
+        {
+            Data = data;
+            Status = status;
+            StatusText = statusText;
+            Url = url;
+        }
+
         public int Status { get; set; } = 100;
         public string StatusText { get; set; } = "";
-        public bool Ok { get => Status >= 200 && Status <= 299; }
+        public bool Ok => Status >= 200 && Status <= 299;
         public Dictionary<string, string> Headers { get; set; }
         public string Url { get; set; }
 
@@ -57,14 +65,6 @@ namespace SboxDiscordBot
             return JsonConvert.DeserializeObject<Dictionary<string, string>>(Text());
         }
 
-        public FetchResponse(byte[] data, int status, string statusText, string url)
-        {
-            Data = data;
-            Status = status;
-            StatusText = statusText;
-            Url = url;
-        }
-
         /*
          * Not implemented here:
          * public FetchBlob Blob() { }
@@ -75,19 +75,19 @@ namespace SboxDiscordBot
 
     public class Request
     {
-        private List<FetchRequest> fetchRequestsList = new List<FetchRequest>();
+        private readonly List<FetchRequest> fetchRequestsList = new();
+
+        public static Request Instance { get; } = new();
 
         private Promise<FetchResponse> InternalFetch(string url, FetchOptions options = null)
         {
             var newRequest = new FetchRequest();
             fetchRequestsList.Add(newRequest);
-            
+
             newRequest.Fetch(url, options);
 
             return newRequest.Promise;
         }
-
-        public static Request Instance { get; private set; } = new Request();
 
         public static Promise<FetchResponse> Fetch(string url, FetchOptions options = null)
         {
@@ -97,15 +97,15 @@ namespace SboxDiscordBot
 
     public class FetchRequest
     {
-        public WebClient WebClient { get; set; }
-        public Promise<FetchResponse> Promise { get; set; }
-
         public FetchRequest()
         {
             WebClient = new WebClient();
             Promise = new Promise<FetchResponse>();
         }
-        
+
+        public WebClient WebClient { get; set; }
+        public Promise<FetchResponse> Promise { get; set; }
+
         public void Fetch(string url, FetchOptions options = null)
         {
             options ??= new FetchOptions();
@@ -130,7 +130,7 @@ namespace SboxDiscordBot
 
         private void UploadDataCompleted(string url, object sender, EventArgs ev)
         {
-            var uploadEv = (UploadStringCompletedEventArgs)ev;
+            var uploadEv = (UploadStringCompletedEventArgs) ev;
             if (uploadEv.Error != null)
             {
                 Logging.Log(uploadEv.Error.Message, Logging.Severity.Fatal);
@@ -142,18 +142,18 @@ namespace SboxDiscordBot
                 var response = new FetchResponse(Encoding.UTF8.GetBytes(uploadEv.Result), 200, "OK", url);
 
                 response.Headers = new Dictionary<string, string>();
-                for (int i = 0; i < WebClient.ResponseHeaders?.Count; i++)
+                for (var i = 0; i < WebClient.ResponseHeaders?.Count; i++)
                     response.Headers.Add(WebClient.ResponseHeaders.GetKey(i), WebClient.ResponseHeaders.Get(i));
 
                 Promise.Resolve(response);
             }
-            
+
             WebClient.Dispose();
         }
 
         private void DownloadDataCompleted(string url, object sender, EventArgs ev)
         {
-            var downloadEv = (DownloadDataCompletedEventArgs)ev;
+            var downloadEv = (DownloadDataCompletedEventArgs) ev;
             if (downloadEv.Error != null)
             {
                 Logging.Log(downloadEv.Error.Message, Logging.Severity.Fatal);
@@ -165,12 +165,12 @@ namespace SboxDiscordBot
                 var response = new FetchResponse(downloadEv.Result, 200, "OK", url);
 
                 response.Headers = new Dictionary<string, string>();
-                for (int i = 0; i < WebClient.ResponseHeaders?.Count; i++)
+                for (var i = 0; i < WebClient.ResponseHeaders?.Count; i++)
                     response.Headers.Add(WebClient.ResponseHeaders.GetKey(i), WebClient.ResponseHeaders.Get(i));
 
                 Promise.Resolve(response);
             }
-            
+
             WebClient.Dispose();
         }
     }

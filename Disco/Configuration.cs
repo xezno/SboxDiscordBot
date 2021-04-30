@@ -11,14 +11,13 @@
 
     public class ConfigBucket : DataStructure<Configuration, ConfigBucket>
     {
-
         public override bool ReadOnly => true;
         public override string Location => "Config.json";
 
-        public static string prefix { get => Instance.Data.Prefix; }
-        public static string botName { get => Instance.Data.BotName; }
-        public static string botImage { get => Instance.Data.BotImage; }
-        public static string botURL { get => Instance.Data.BotUrl; }
-        public static string botToken { get => Instance.Data.BotToken; }
+        public static string prefix => Instance.Data.Prefix;
+        public static string botName => Instance.Data.BotName;
+        public static string botImage => Instance.Data.BotImage;
+        public static string botURL => Instance.Data.BotUrl;
+        public static string botToken => Instance.Data.BotToken;
     }
 }

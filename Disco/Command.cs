@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace Disco
+﻿namespace Disco
 {
     public abstract class Command : Singleton<Command>
     {

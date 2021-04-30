@@ -1,7 +1,7 @@
-﻿using Discord;
-using Discord.Rest;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using Discord;
+using Discord.Rest;
 
 namespace Disco
 {
@@ -16,7 +16,7 @@ namespace Disco
 
     public class ReactionBuilder
     {
-        private Reaction reaction;
+        private readonly Reaction reaction;
 
         public ReactionBuilder()
         {
@@ -56,7 +56,7 @@ namespace Disco
 
     public class ReactionHandler : Singleton<ReactionHandler>
     {
-        private List<Reaction> reactions = new List<Reaction>();
+        private readonly List<Reaction> reactions = new();
 
         public void WaitForReaction(Reaction reaction)
         {
@@ -65,7 +65,7 @@ namespace Disco
 
         public static ReactionBuilder BuildReaction()
         {
-            return new ReactionBuilder();
+            return new();
         }
 
         public void CleanReactions()
@@ -73,24 +73,22 @@ namespace Disco
             lock (reactions)
             {
                 var ticksNow = (DateTime.Now - new DateTime(1970, 0, 0)).TotalSeconds;
-                for (int i = 0; i < reactions.Count; ++i)
+                for (var i = 0; i < reactions.Count; ++i)
                 {
                     var reaction = reactions[i];
 
-                    if ((reaction.TimeAdded + reaction.Timeout) > ticksNow)
-                    {
-                        reactions.RemoveAt(i);
-                    }
+                    if (reaction.TimeAdded + reaction.Timeout > ticksNow) reactions.RemoveAt(i);
                 }
             }
         }
 
         public void TriggerReaction(IUser author, ulong messageId, IEmote emote, DiscoApplication application)
         {
-            var reactionMatch = reactions.Find(new Predicate<Reaction>((reaction) =>
+            var reactionMatch = reactions.Find(reaction =>
             {
-                return reaction.Message.Id == messageId && (reaction.Emote == null || reaction.Emote == emote) && author != application.Client?.CurrentUser;
-            }));
+                return reaction.Message.Id == messageId && (reaction.Emote == null || reaction.Emote == emote) &&
+                       author != application.Client?.CurrentUser;
+            });
             if (reactionMatch != null)
             {
                 reactionMatch?.Handler.Invoke();

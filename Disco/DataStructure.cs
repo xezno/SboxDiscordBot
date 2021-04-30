@@ -1,6 +1,6 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace Disco
 {
@@ -12,10 +12,9 @@ namespace Disco
 
     public abstract class DataStructure<Y, T> : Singleton<T>, DataStructureBase
     {
+        private Y data;
         public abstract bool ReadOnly { get; }
         public abstract string Location { get; }
-        
-        private Y data;
 
         public Y Data
         {
@@ -27,14 +26,6 @@ namespace Disco
                 return data;
             }
             set => data = value;
-        }
-
-        private void CreateDirectoryIfMissing()
-        {
-            var directoryName = Path.GetDirectoryName(Location);
-            if (string.IsNullOrEmpty(directoryName))
-                return;
-            Directory.CreateDirectory(directoryName);
         }
 
         public void Load()
@@ -49,7 +40,7 @@ namespace Disco
 
             Utils.Log($"Loaded {Location}");
 
-            using StreamReader sr = new StreamReader(Location);
+            using var sr = new StreamReader(Location);
             Data = JsonConvert.DeserializeObject<Y>(sr.ReadToEnd());
         }
 
@@ -59,11 +50,19 @@ namespace Disco
             {
                 CreateDirectoryIfMissing();
 
-                using StreamWriter sw = new StreamWriter(Location);
+                using var sw = new StreamWriter(Location);
                 sw.Write(JsonConvert.SerializeObject(Data));
 
                 Utils.Log($"Saved {Location}");
             }
+        }
+
+        private void CreateDirectoryIfMissing()
+        {
+            var directoryName = Path.GetDirectoryName(Location);
+            if (string.IsNullOrEmpty(directoryName))
+                return;
+            Directory.CreateDirectory(directoryName);
         }
     }
 }

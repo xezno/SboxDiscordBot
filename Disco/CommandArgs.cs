@@ -6,9 +6,9 @@ namespace Disco
     {
         public CommandArgs(string[] args, SocketMessage message, DiscordShardedClient discordClient)
         {
-            this.Args = args;
-            this.Message = message;
-            this.DiscordClient = discordClient;
+            Args = args;
+            Message = message;
+            DiscordClient = discordClient;
         }
 
         public string[] Args { get; }

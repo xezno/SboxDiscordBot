@@ -1,18 +1,17 @@
-﻿using Discord;
-using Discord.WebSocket;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Threading.Tasks;
-using System.Timers;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
+using Discord;
+using Discord.WebSocket;
 
 namespace Disco
 {
     public class DiscoApplication
     {
-        private static List<Command> commands = new List<Command>();
+        private static readonly List<Command> commands = new();
         private bool isReady;
 
         public DiscordShardedClient Client { get; private set; }
@@ -38,56 +37,48 @@ namespace Disco
 
         private void LoadComponents()
         {
-            foreach (Type t in Assembly.GetExecutingAssembly().GetTypes())
-            {
-                if (typeof(DataStructureBase).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract && t != typeof(DataStructure<,>))
+            foreach (var t in Assembly.GetExecutingAssembly().GetTypes())
+                if (typeof(DataStructureBase).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract &&
+                    t != typeof(DataStructure<,>))
                 {
                     Utils.Log($"Loading component {t.Name}");
                     if (t.BaseType != null)
-                    {
-                        ((DataStructureBase)(t.BaseType // Class -> DataStructureBase -> Singleton<Class>
-                            .GetMethod("Get")
-                            ?.Invoke(null, null)))
-                        ?.Load();
-                    }
+                        ((DataStructureBase) t.BaseType // Class -> DataStructureBase -> Singleton<Class>
+                                .GetMethod("Get")
+                                ?.Invoke(null, null))
+                            ?.Load();
                     else
-                    {
                         Utils.Log($"Couldn't load {t.Name} as base type was null");
-                    }
                 }
-            }
         }
 
         private void LoadCommands()
         {
-            Dictionary<string, List<Command>> aliases = new Dictionary<string, List<Command>>();
-            foreach (var t in Assembly.GetEntryAssembly().GetTypes().Where(t => !t.IsAbstract && t.BaseType == typeof(Command)))
+            var aliases = new Dictionary<string, List<Command>>();
+            foreach (var t in Assembly.GetEntryAssembly().GetTypes()
+                .Where(t => !t.IsAbstract && t.BaseType == typeof(Command)))
             {
-                var instance = (Command)Activator.CreateInstance(t);
+                var instance = (Command) Activator.CreateInstance(t);
                 commands.Add(instance);
 
                 foreach (var alias in instance.Aliases)
-                {
                     if (aliases.ContainsKey(alias))
                     {
                         Utils.Log($"Alias collision detected for '{alias}':");
                         aliases[alias].Add(instance);
-                        foreach (var command in aliases[alias])
-                        {
-                            Utils.Log($"\t{command.GetType().Name}");
-                        }
+                        foreach (var command in aliases[alias]) Utils.Log($"\t{command.GetType().Name}");
                     }
                     else
                     {
-                        aliases.Add(alias, new List<Command>() { instance });
+                        aliases.Add(alias, new List<Command> {instance});
                     }
-                }
             }
 
             Utils.Log($"{commands.Count} commands loaded");
         }
 
-        private Task ReactionAdded(Cacheable<IUserMessage, ulong> message, ISocketMessageChannel channel, SocketReaction reaction)
+        private Task ReactionAdded(Cacheable<IUserMessage, ulong> message, ISocketMessageChannel channel,
+            SocketReaction reaction)
         {
             ReactionHandler.Instance.TriggerReaction(reaction.User.Value, message.Id, reaction.Emote, this);
             return Task.CompletedTask;
@@ -101,13 +92,12 @@ namespace Disco
             foreach (var guild in socketClient.Guilds)
             {
                 Console.WriteLine(guild.Name);
-                foreach (var channel in guild.Channels)
-                {
-                    Console.WriteLine($"\t{channel.Name}");
-                }
+                foreach (var channel in guild.Channels) Console.WriteLine($"\t{channel.Name}");
             }
+
             return Task.CompletedTask;
         }
+
         public Task LoggedIn()
         {
             Utils.Log("Logged In!");
@@ -129,14 +119,14 @@ namespace Disco
                     return;
 
                 var splitContent = message.Content.Split(' ');
-                bool commandRun = false;
+                var commandRun = false;
 
                 // Check if it's actually a command
                 if (!splitContent[0].StartsWith(ConfigBucket.prefix, StringComparison.CurrentCultureIgnoreCase))
                     return;
 
-                string userCommand = splitContent[0].Remove(0, ConfigBucket.prefix.Length);
-                foreach (Command c in commands)
+                var userCommand = splitContent[0].Remove(0, ConfigBucket.prefix.Length);
+                foreach (var c in commands)
                 {
                     commandRun = await RunCommand(message, userCommand, c);
                     if (commandRun)
@@ -146,23 +136,23 @@ namespace Disco
                 if (!commandRun)
                 {
                     string closestCommand = null;
-                    int closestCommandRating = 3;
-                    foreach (Command c in commands)
+                    var closestCommandRating = 3;
+                    foreach (var c in commands)
+                    foreach (var s in c.Aliases)
                     {
-                        foreach (string s in c.Aliases)
+                        var levDist = Utils.LevenshteinDistance(s.ToLower(), userCommand.ToLower());
+                        if (levDist <= 2 && levDist < closestCommandRating)
                         {
-                            var levDist = Utils.LevenshteinDistance(s.ToLower(), userCommand.ToLower());
-                            if (levDist <= 2 && levDist < closestCommandRating)
-                            {
-                                closestCommand = s;
-                                closestCommandRating = levDist;
-                            }
+                            closestCommand = s;
+                            closestCommandRating = levDist;
                         }
                     }
+
                     if (string.IsNullOrEmpty(closestCommand))
-                        Utils.SendError(message.Channel, $"Command not found.");
+                        Utils.SendError(message.Channel, "Command not found.");
                     else
-                        Utils.SendError(message.Channel, $"Command not found; did you mean `{ConfigBucket.prefix}{closestCommand}`?");
+                        Utils.SendError(message.Channel,
+                            $"Command not found; did you mean `{ConfigBucket.prefix}{closestCommand}`?");
                 }
             }
             catch (Exception ex)
@@ -178,9 +168,8 @@ namespace Disco
 
         private async Task<bool> RunCommand(SocketMessage message, string userCommand, Command c)
         {
-            bool commandRun = false;
-            foreach (string s in c.Aliases)
-            {
+            var commandRun = false;
+            foreach (var s in c.Aliases)
                 if (s.Equals(userCommand, StringComparison.CurrentCultureIgnoreCase))
                 {
                     string[] args;
@@ -206,7 +195,7 @@ namespace Disco
                     commandRun = true;
                     break;
                 }
-            }
+
             return commandRun;
         }
     }
