@@ -1,5 +1,7 @@
 # bootleg s&box backend api docs
 
+All endpoints are on the `https://apix.facepunch.com/api/` domain.
+
 ## Types
 
 NOTE: Nullable types are suffixed with `?`. This API is subject to change and probably
