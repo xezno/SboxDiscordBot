@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SboxDiscordBot", "SboxDiscordBot\SboxDiscordBot.csproj", "{786F137C-F5BF-4F27-9AD9-EBA2C26560DD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SboxDiscordBot.Tests", "SboxDiscordBot.Tests\SboxDiscordBot.Tests.csproj", "{04993CF5-B77D-47E2-808A-E518EE7ACA4E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{786F137C-F5BF-4F27-9AD9-EBA2C26560DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{786F137C-F5BF-4F27-9AD9-EBA2C26560DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{786F137C-F5BF-4F27-9AD9-EBA2C26560DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04993CF5-B77D-47E2-808A-E518EE7ACA4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04993CF5-B77D-47E2-808A-E518EE7ACA4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04993CF5-B77D-47E2-808A-E518EE7ACA4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04993CF5-B77D-47E2-808A-E518EE7ACA4E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

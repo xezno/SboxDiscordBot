@@ -6,7 +6,8 @@ namespace SboxDiscordBot
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var bootstrap = new Bootstrap();
+            bootstrap.Run();
         }
     }
 }
