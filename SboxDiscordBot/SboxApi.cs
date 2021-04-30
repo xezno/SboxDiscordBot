@@ -66,37 +66,34 @@ namespace SboxDiscordBot
             // Programmer challenge: take a shot every time you see the word 'Then'
             Request.Fetch("http://apix.facepunch.com/api/sbox/asset/find?type=map")
                 .Then(ResolveFindResult)
+                .Then(() => Request.Fetch("http://apix.facepunch.com/api/sbox/asset/find?type=gamemode"))
+                .Then(ResolveFindResult)
+                .Then(() => Instance.GetIndex())
+                .Then(index =>
+                {
+                    foreach (var category in index)
+                    {
+                        AddAssets(category.Packages);
+                    }
+                })
                 .Then(() =>
                 {
-                    Request.Fetch("http://apix.facepunch.com/api/sbox/asset/find?type=gamemode")
-                        .Then(ResolveFindResult)
-                        .Then(() =>
-                        {
-                            Instance.GetIndex().Then(index =>
-                                {
-                                    foreach (var category in index)
-                                        AddAssets(category.Packages);
-                                }
-                            ).Then(() =>
+                    // Step 2: search for our org
+                    if (orgDictionary.ContainsKey(ident))
+                    {
+                        // Step 3: get org's first asset
+                        Instance.GetPackage($"{ident}.{orgDictionary[ident].First()}")
+                            .Then(asset =>
                             {
-                                // Step 2: search for our org
-                                if (orgDictionary.ContainsKey(ident))
-                                {
-                                    // Step 3: get org's first asset
-                                    Instance.GetPackage($"{ident}.{orgDictionary[ident].First()}")
-                                    .Then(asset =>
-                                        {
-                                            // Step 4: return title & description
-                                            asset.Package.Org.PackageIdents = orgDictionary[ident].ToArray();
-                                            promise.Resolve(asset.Package.Org);
-                                        });
-                                }
-                                else
-                                {
-                                    promise.Reject(new Exception("Org not found"));
-                                }
-                            }).Catch(exception => promise.Reject(exception));
-                        }).Catch(exception => promise.Reject(exception));
+                                // Step 4: return title & description
+                                asset.Package.Org.PackageIdents = orgDictionary[ident].ToArray();
+                                promise.Resolve(asset.Package.Org);
+                            });
+                    }
+                    else
+                    {
+                        promise.Reject(new Exception("Org not found"));
+                    }
                 }).Catch(exception => promise.Reject(exception));
             return promise;
         }
