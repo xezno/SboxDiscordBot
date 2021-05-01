@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using RSG;
+using System.Threading.Tasks;
 
 namespace SboxDiscordBot
 {
@@ -9,24 +9,28 @@ namespace SboxDiscordBot
     {
         public static SboxApi Instance { get; } = new();
 
-        public Promise<List<Category>> GetIndex()
+        public Task<List<Category>> GetIndex()
         {
-            var promise = new Promise<List<Category>>();
+            var taskCompletionSource = new TaskCompletionSource<List<Category>>();
             // Endpoint: https://apix.facepunch.com/api/sbox/menu/index
-            Request.Fetch("https://apix.facepunch.com/api/sbox/menu/index").Then(response =>
+            Request.Fetch("https://apix.facepunch.com/api/sbox/menu/index").ContinueWith(task =>
             {
+                if (task.Exception != null)
+                    taskCompletionSource.TrySetException(new Exception("Couldn't get index"));
+                
+                var response = task.Result;
                 var index = response.Json<List<Category>>();
-                promise.Resolve(index);
-            }).Catch(exception => { promise.Reject(exception); });
+                taskCompletionSource.TrySetResult(index);
+            });
 
-            return promise;
+            return taskCompletionSource.Task;
         }
 
-        public Promise<Org> GetOrg(string ident)
+        public Task<Org> GetOrg(string ident)
         {
             ident = ident.ToLower();
 
-            var promise = new Promise<Org>();
+            var taskCompletionSource = new TaskCompletionSource<Org>();
             /* Right now, this is a big bodge / hack
              * Here's what we do:
              * 1. Visit several endpoints (/asset/find?type=map|gamemode, /menu/index) and collect a list of orgs with
@@ -59,58 +63,75 @@ namespace SboxDiscordBot
                     }
             }
 
-            void ResolveFindResult(FetchResponse response)
+            void ResolveFindResult(Task<FetchResponse> task)
             {
+                if (task.Exception != null)
+                    taskCompletionSource.TrySetException(new Exception("Couldn't resolve find result"));
+                
+                var response = task.Result;
                 var findResult = response.Json<FindResult>();
                 AddAssets(findResult.Assets);
             }
 
             // Programmer challenge: take a shot every time you see the word 'Then'
             Request.Fetch("http://apix.facepunch.com/api/sbox/asset/find?type=map")
-                .Then(ResolveFindResult)
-                .Then(() => Request.Fetch("http://apix.facepunch.com/api/sbox/asset/find?type=gamemode"))
-                .Then(ResolveFindResult)
-                .Then(() => Instance.GetIndex())
-                .Then(index =>
+                .ContinueWith(ResolveFindResult)
+                .ContinueWith(_ => 
+                    Request.Fetch("http://apix.facepunch.com/api/sbox/asset/find?type=gamemode")
+                        .ContinueWith(ResolveFindResult))
+                .ContinueWith(_ => Instance.GetIndex())
+                .ContinueWith(task =>
                 {
-                    foreach (var category in index)
+                    if (task.Exception != null)
+                        taskCompletionSource.TrySetException(new Exception("Couldn't resolve index"));
+                    
+                    var index = task.Result;
+                    foreach (var category in index.Result)
                     {
                         AddAssets(category.Packages);
                     }
                 })
-                .Then(() =>
+                .ContinueWith(_ =>
                 {
                     // Step 2: search for our org
                     if (orgDictionary.ContainsKey(ident))
                     {
                         // Step 3: get org's first asset
                         Instance.GetPackage($"{ident}.{orgDictionary[ident].First()}")
-                            .Then(asset =>
+                            .ContinueWith(task =>
                             {
+                                if (task.Exception != null)
+                                    taskCompletionSource.TrySetException(new Exception("Org not found"));
+                                
                                 // Step 4: return title & description
+                                var asset = task.Result;
                                 asset.Package.Org.PackageIdents = orgDictionary[ident].ToArray();
-                                promise.Resolve(asset.Package.Org);
+                                taskCompletionSource.TrySetResult(asset.Package.Org);
                             });
                     }
                     else
                     {
-                        promise.Reject(new Exception("Org not found"));
+                        taskCompletionSource.TrySetException(new Exception("Org not found"));
                     }
-                }).Catch(exception => promise.Reject(exception));
-            return promise;
+                });
+            return taskCompletionSource.Task;
         }
 
-        public Promise<Asset> GetPackage(string ident)
+        public Task<Asset> GetPackage(string ident)
         {
-            var promise = new Promise<Asset>();
+            var taskCompletionSource = new TaskCompletionSource<Asset>();
             // Endpoint: http://apix.facepunch.com/api/sbox/asset/get?id=(name)
-            Request.Fetch($"http://apix.facepunch.com/api/sbox/asset/get?id={ident}").Then(response =>
+            Request.Fetch($"http://apix.facepunch.com/api/sbox/asset/get?id={ident}").ContinueWith(task =>
             {
+                if (task.Exception != null)
+                    taskCompletionSource.TrySetException(new Exception("No such package exists."));
+                
+                var response = task.Result;
                 var index = response.Json<Asset>();
-                promise.Resolve(index);
-            }).Catch(exception => { promise.Reject(exception); });
+                taskCompletionSource.TrySetResult(index);
+            });
 
-            return promise;
+            return taskCompletionSource.Task;
         }
     }
 }

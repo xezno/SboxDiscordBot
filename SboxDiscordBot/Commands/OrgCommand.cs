@@ -15,8 +15,12 @@ namespace SboxDiscordBot.Commands
 
         public override void Run(CommandArgs commandArgs)
         {
-            SboxApi.Instance.GetOrg(commandArgs.Args[0]).Then(org =>
+            SboxApi.Instance.GetOrg(commandArgs.Args[0]).ContinueWith(task =>
                 {
+                    if (task.Exception != null)
+                        Utils.SendError(commandArgs.Message.Channel, task.Exception.Message);
+                    
+                    var org = task.Result;
                     var eb = Utils.BuildDefaultEmbed();
 
                     // bad bad!
@@ -31,7 +35,7 @@ namespace SboxDiscordBot.Commands
                     eb.WithUrl($"https://sbox.facepunch.com/dev/{org.Ident}");
                     eb.WithDescription(org.Description);
 
-                    eb.AddField("Available Assets", $"```{string.Join('\n', org.PackageIdents)}```");
+                    eb.AddField("Available Assets", $"```{string.Join('\n', (string[])org.PackageIdents)}```");
 
                     if (org.Thumb != null)
                         eb.WithThumbnailUrl(org.Thumb.ToString());
@@ -41,11 +45,7 @@ namespace SboxDiscordBot.Commands
                     
                     commandArgs.Message.Channel.SendMessageAsync(embed: eb.Build());
                 }
-            ).Catch(exception =>
-            {
-                Logging.Log(exception.ToString(), Logging.Severity.High);
-                Utils.SendError(commandArgs.Message.Channel, exception.Message);
-            });
+            );
         }
     }
 }

@@ -14,8 +14,13 @@ namespace SboxDiscordBot.Commands
 
         public override void Run(CommandArgs commandArgs)
         {
-            SboxApi.Instance.GetPackage(commandArgs.Args[0]).Then(asset =>
+            SboxApi.Instance.GetPackage(commandArgs.Args[0]).ContinueWith(task =>
                 {
+                    if (task.Exception != null)
+                        Utils.SendError(commandArgs.Message.Channel, task.Exception.Message);
+                    
+                    var asset = task.Result;
+
                     var eb = Utils.BuildDefaultEmbed();
                     var package = asset.Package;
 
@@ -24,7 +29,7 @@ namespace SboxDiscordBot.Commands
                         orgTitle = "Untitled Org";
 
                     var friendlyPackageType = package.PackageType.ToString().ToLower();
-                    
+
                     /*
                      * TODO: This is also being used in OrgCommand.cs so we should probably make this into its own
                      * util / helper function somewhere.
@@ -37,7 +42,7 @@ namespace SboxDiscordBot.Commands
                         linkStr += $"[Twitter]({package.Org.SocialTwitter}) ";
                     if (!string.IsNullOrEmpty(package.Org.SocialWeb))
                         linkStr += $"[Website]({package.Org.SocialWeb}) ";
-                    
+
                     // Set embed properties
                     eb.WithTitle(package.Title);
                     eb.WithUrl($"https://sbox.facepunch.com/dev/{package.Org.Ident}/{package.Ident}");
@@ -51,11 +56,7 @@ namespace SboxDiscordBot.Commands
                         eb.AddField("Links", linkStr);
                     commandArgs.Message.Channel.SendMessageAsync(embed: eb.Build());
                 }
-            ).Catch(exception =>
-            {
-                Logging.Log(exception.ToString(), Logging.Severity.High);
-                Utils.SendError(commandArgs.Message.Channel, exception.Message);
-            });
+            );
         }
     }
 }

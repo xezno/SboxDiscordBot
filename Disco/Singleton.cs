@@ -2,11 +2,11 @@ using System;
 
 namespace Disco
 {
-    public class Singleton<T>
+    public class Singleton<TSingletonType>
     {
-        private static T instance;
+        private static TSingletonType instance;
 
-        public static T Instance
+        public static TSingletonType Instance
         {
             get
             {
@@ -17,7 +17,7 @@ namespace Disco
 
         public static void Create()
         {
-            instance = Activator.CreateInstance<T>();
+            instance = Activator.CreateInstance<TSingletonType>();
         }
     }
 }

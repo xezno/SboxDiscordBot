@@ -14,8 +14,13 @@ namespace SboxDiscordBot.Commands
 
         public override void Run(CommandArgs commandArgs)
         {
-            SboxApi.Instance.GetIndex().Then(index =>
+            SboxApi.Instance.GetIndex().ContinueWith(task =>
                 {
+                    if (task.Exception != null)
+                        Utils.SendError(commandArgs.Message.Channel, task.Exception.Message);
+                    
+                    var index = task.Result;
+                    
                     var eb = Utils.BuildDefaultEmbed();
                     eb.WithTitle("Index");
                     eb.WithDescription("Available Categories");
@@ -24,11 +29,7 @@ namespace SboxDiscordBot.Commands
 
                     commandArgs.Message.Channel.SendMessageAsync(embed: eb.Build());
                 }
-            ).Catch(exception =>
-            {
-                Logging.Log(exception.ToString(), Logging.Severity.High);
-                Utils.SendError(commandArgs.Message.Channel, exception.Message);
-            });
+            );
         }
     }
 }

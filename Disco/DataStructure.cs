@@ -10,13 +10,13 @@ namespace Disco
         void Save();
     }
 
-    public abstract class DataStructure<Y, T> : Singleton<T>, DataStructureBase
+    public abstract class DataStructure<TDataType, TSingletonType> : Singleton<TSingletonType>, DataStructureBase
     {
-        private Y data;
+        private TDataType data;
         public abstract bool ReadOnly { get; }
         public abstract string Location { get; }
 
-        public Y Data
+        public TDataType Data
         {
             get
             {
@@ -34,14 +34,14 @@ namespace Disco
             if (!File.Exists(Location))
             {
                 Utils.Log($"No previous data found (file {Location} is missing); starting from scratch");
-                Data = Activator.CreateInstance<Y>();
+                Data = Activator.CreateInstance<TDataType>();
                 return;
             }
 
             Utils.Log($"Loaded {Location}");
 
             using var sr = new StreamReader(Location);
-            Data = JsonConvert.DeserializeObject<Y>(sr.ReadToEnd());
+            Data = JsonConvert.DeserializeObject<TDataType>(sr.ReadToEnd());
         }
 
         public void Save()
